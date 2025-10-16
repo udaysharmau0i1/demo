@@ -1,0 +1,212 @@
+/Models
+    Employee.cs
+/Controllers
+    EmployeeController.cs
+/Views/Employee
+    Index.cshtml
+    Create.cshtml
+    Edit.cshtml
+    Delete.cshtml
+-----------------------------------------
+namespace YourNamespace.Models
+{
+    public class Employee
+    {
+        public int EmployeeID { get; set; }
+        public string Name { get; set; }
+        public string Position { get; set; }
+        public decimal Salary { get; set; }
+    }
+}
+------------------------------------------------------
+using System.Collections.Generic;
+using System.Web.Mvc;
+using Oracle.ManagedDataAccess.Client;
+using YourNamespace.Models;
+
+namespace YourNamespace.Controllers
+{
+    public class EmployeeController : Controller
+    {
+        string connStr = "User Id=your_user;Password=your_password;Data Source=your_oracle_source;";
+
+        // GET: Employee
+        public ActionResult Index()
+        {
+            List<Employee> employees = new List<Employee>();
+
+            using (OracleConnection conn = new OracleConnection(connStr))
+            {
+                conn.Open();
+                string query = "SELECT * FROM Employees";
+                OracleCommand cmd = new OracleCommand(query, conn);
+                OracleDataReader reader = cmd.ExecuteReader();
+
+                while (reader.Read())
+                {
+                    employees.Add(new Employee
+                    {
+                        EmployeeID = Convert.ToInt32(reader["EmployeeID"]),
+                        Name = reader["Name"].ToString(),
+                        Position = reader["Position"].ToString(),
+                        Salary = Convert.ToDecimal(reader["Salary"])
+                    });
+                }
+            }
+
+            return View(employees);
+        }
+
+        // GET: Create
+        public ActionResult Create()
+        {
+            return View();
+        }
+
+        // POST: Create
+        [HttpPost]
+        public ActionResult Create(Employee emp)
+        {
+            using (OracleConnection conn = new OracleConnection(connStr))
+            {
+                conn.Open();
+                string query = "INSERT INTO Employees (Name, Position, Salary) VALUES (:Name, :Position, :Salary)";
+                OracleCommand cmd = new OracleCommand(query, conn);
+                cmd.Parameters.Add("Name", emp.Name);
+                cmd.Parameters.Add("Position", emp.Position);
+                cmd.Parameters.Add("Salary", emp.Salary);
+                cmd.ExecuteNonQuery();
+            }
+
+            return RedirectToAction("Index");
+        }
+
+        // GET: Edit
+        public ActionResult Edit(int id)
+        {
+            Employee emp = new Employee();
+            using (OracleConnection conn = new OracleConnection(connStr))
+            {
+                conn.Open();
+                string query = "SELECT * FROM Employees WHERE EmployeeID = :ID";
+                OracleCommand cmd = new OracleCommand(query, conn);
+                cmd.Parameters.Add("ID", id);
+                OracleDataReader reader = cmd.ExecuteReader();
+
+                if (reader.Read())
+                {
+                    emp.EmployeeID = Convert.ToInt32(reader["EmployeeID"]);
+                    emp.Name = reader["Name"].ToString();
+                    emp.Position = reader["Position"].ToString();
+                    emp.Salary = Convert.ToDecimal(reader["Salary"]);
+                }
+            }
+            return View(emp);
+        }
+
+        // POST: Edit
+        [HttpPost]
+        public ActionResult Edit(Employee emp)
+        {
+            using (OracleConnection conn = new OracleConnection(connStr))
+            {
+                conn.Open();
+                string query = "UPDATE Employees SET Name = :Name, Position = :Position, Salary = :Salary WHERE EmployeeID = :ID";
+                OracleCommand cmd = new OracleCommand(query, conn);
+                cmd.Parameters.Add("Name", emp.Name);
+                cmd.Parameters.Add("Position", emp.Position);
+                cmd.Parameters.Add("Salary", emp.Salary);
+                cmd.Parameters.Add("ID", emp.EmployeeID);
+                cmd.ExecuteNonQuery();
+            }
+
+            return RedirectToAction("Index");
+        }
+
+        // GET: Delete
+        public ActionResult Delete(int id)
+        {
+            using (OracleConnection conn = new OracleConnection(connStr))
+            {
+                conn.Open();
+                string query = "DELETE FROM Employees WHERE EmployeeID = :ID";
+                OracleCommand cmd = new OracleCommand(query, conn);
+                cmd.Parameters.Add("ID", id);
+                cmd.ExecuteNonQuery();
+            }
+
+            return RedirectToAction("Index");
+        }
+    }
+}
+----------------------------------------------------------------
+Index.cshtml
+
+@model List<YourNamespace.Models.Employee>
+
+<h2>Employees</h2>
+<p>@Html.ActionLink("Add New", "Create")</p>
+
+<table>
+    <tr>
+        <th>Name</th>
+        <th>Position</th>
+        <th>Salary</th>
+        <th>Actions</th>
+    </tr>
+    @foreach (var emp in Model)
+    {
+        <tr>
+            <td>@emp.Name</td>
+            <td>@emp.Position</td>
+            <td>@emp.Salary</td>
+            <td>
+                @Html.ActionLink("Edit", "Edit", new { id = emp.EmployeeID }) |
+                @Html.ActionLink("Delete", "Delete", new { id = emp.EmployeeID })
+            </td>
+        </tr>
+    }
+</table>
+------------------------------------------------------------------------------------------
+
+Create.cshtml
+
+@model YourNamespace.Models.Employee
+
+<h2>Add Employee</h2>
+@using (Html.BeginForm()) {
+    <p>Name: @Html.TextBoxFor(m => m.Name)</p>
+    <p>Position: @Html.TextBoxFor(m => m.Position)</p>
+    <p>Salary: @Html.TextBoxFor(m => m.Salary)</p>
+    <input type="submit" value="Create" />
+}
+---------------------------------------------------------------------------------------------------
+
+Edit.cshtml
+
+@model YourNamespace.Models.Employee
+
+<h2>Edit Employee</h2>
+@using (Html.BeginForm()) {
+    @Html.HiddenFor(m => m.EmployeeID)
+    <p>Name: @Html.TextBoxFor(m => m.Name)</p>
+    <p>Position: @Html.TextBoxFor(m => m.Position)</p>
+    <p>Salary: @Html.TextBoxFor(m => m.Salary)</p>
+    <input type="submit" value="Save" />
+}
+----------------------------------------------------------------------
+
+routes.MapRoute(
+    name: "Default",
+    url: "{controller}/{action}/{id}",
+    defaults: new { controller = "Employee", action = "Index", id = UrlParameter.Optional }
+);
+---------------------------------------------------------------------------------------------------
+
+
+
+
+http://localhost:[port]/Employee/Index
+-------------------------------------------------------------------------------------------------
+
+
